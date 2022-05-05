@@ -60,13 +60,14 @@ void OSC_INIT(uint32_t platform, uint32_t api)
   droneVoice->sampleLen = sample->len;
   droneVoice->sampleLoopIdx = sample->loopIdx;
 
-  droneVoice->sampleStep = sample->rate / (k_samplerate * 4.f);
+  droneVoice->sampleStep = sample->rate / (k_samplerate * 2.f);
   droneVoice->sampleCnt = 0;
 
   droneVoice->loopInf = sample->loopInf;
   droneVoice->gain = 0.5;
 
   droneVoice->isPlaying = true;
+
 }
 
 void OSC_CYCLE(const user_osc_param_t * const params, int32_t *yn, const uint32_t frames)
@@ -74,6 +75,7 @@ void OSC_CYCLE(const user_osc_param_t * const params, int32_t *yn, const uint32_
   MForest::Params &p = mforest.params;
   MForest::Voice *voices = &mforest.voices[0];
   {
+ 
     if (mforest.state.trigSample) {
       mforest.state.trigSample = TRIGSAMPLE_NONE;
 
@@ -126,13 +128,13 @@ void OSC_CYCLE(const user_osc_param_t * const params, int32_t *yn, const uint32_
               voice.loopInf = sample->loopInf;
               voice.gain = *voice.gainGroup;
           
-              if (sample->flags & SAMPLE_FLAG_PITCH_FINE) {
+              if (sample->flags & SAMPLE_FLAG_LIM_PITCH) {
                 voice.sampleStep = ((sample->rate - ((osc_white() * 0.5) + 0.5) * sample->pitchRange)) / k_samplerate ;
               } else {
                 voice.sampleStep = ((sample->rate) * (1.0 - *voice.tuneGroup)) / k_samplerate;
               }
 
-              if (sample->flags & SAMPLE_FLAG_PITCH) {
+              if (sample->flags & SAMPLE_FLAG_RAND_PITCH) {
                 if (rand > 250) {
                   voice.sampleStep *= 0.75;
                 } else if (rand > 240) {
@@ -234,7 +236,7 @@ void OSC_CYCLE(const user_osc_param_t * const params, int32_t *yn, const uint32_
     sampleIdx = (uint16_t)voiceDrone.sampleIdx;
     fr = (voiceDrone.sampleIdx - sampleIdx);
     const float sample = (((sampleBank[sampleIdx] * (1.0 - fr)) + (sampleBank[sampleIdx + 1] * fr)) / DENOMINATOR_8BIT);
-    sig = voiceDrone.hpf.process_fo(sample) * droneGain;
+    sig = (voiceDrone.hpf.process_fo(sample) + osc_white() * 0.025) * droneGain;
     voiceDrone.sampleIdx += voiceDrone.sampleStep;
     voiceDrone.sampleCnt++;
 
